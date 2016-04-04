@@ -1,4 +1,11 @@
-
+import re
+from matplotlib import pyplot as plt
+from skimage.feature import hog
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.externals import joblib
+from sklearn.ensemble import RandomForestClassifier as rf
+from sklearn.ensemble import AdaBoostClassifier as ab
+from sklearn.tree import DecisionTreeClassifier as dt
 # coding: utf-8
 
 # # Automatic Number Plate Recognition in Shogun
@@ -68,6 +75,7 @@ except ImportError:
 import numpy as np
 import os
 from os import listdir
+count = 0
 # get_ipython().magic(u'matplotlib inline')
 
 # plt.rcParams['figure.figsize'] = 10, 10 
@@ -96,7 +104,7 @@ def validate(cnt):
     width=rect[1][0]
     height=rect[1][1]
     if ((width!=0) & (height!=0)):
-        if (((height/width>3)&(height>width))|((width/height>3) & (width>height))):
+        if (((height/width>2)&(height>width))|((width/height>2) & (width>height))):
             if((height*width<16000) & (height*width>2000)): 
                 output=True
     return output
@@ -107,7 +115,13 @@ def generate_seeds(centre, width, height):
     for i in range(10):
         random_integer1=np.random.randint(1000)
         random_integer2=np.random.randint(1000)
-        seed[i]=(centre[0]+random_integer1%int(minsize/2)-int(minsize/2),centre[1]+random_integer2%int(minsize/2)-int(minsize/2))
+        x = centre[0]+random_integer1%int(minsize/2)-int(minsize/2)
+        y = centre[1]+random_integer2%int(minsize/2)-int(minsize/2)
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+        seed[i]=(x,y)
     return seed
 
 def rmsdiff(im1, im2):
@@ -117,9 +131,9 @@ def rmsdiff(im1, im2):
         output=True
     return output
 
-for root,dir,files in os.walk("/home/pramod/sem6/mlt/project/snapshot/"):
+for root,dir,files in os.walk("/home/pramod/sem6/mlt/project/test/"):
     for image_path in sorted(files):
-        loc = 'snapshot/'+str(image_path)
+        loc = 'test/'+str(image_path)
         print loc
         carsample = cv2.imread(loc)
         
@@ -392,7 +406,22 @@ for root,dir,files in os.walk("/home/pramod/sem6/mlt/project/snapshot/"):
         #     orig_rect = cv2.resize(orig_rect,(63,260))
         #     plt.imshow(orig_rect,plt.get_cmap('gray'))
         #     print size,centre,anglea
-
+        # ppc = (8,8)
+        # cpb = (3,3)
+        final_images = []
+        hog_image = []
+        if (len(orig_rects)>0):
+            clf = joblib.load('model/model.pkl')
+            for i in range(0,len(orig_rects)):
+                testimg = orig_rects[i]
+                hog_image.append(hog(testimg))
+            hog_image = np.array(hog_image)
+            y_pred = clf.predict(hog_image)
+            for i in range(0,len(y_pred)):    
+                if y_pred[i] == 1 :
+                    final_images.append(hog_image[i])
+            print len(orig_rects)
+            print len(final_images)
 
         # In[197]:
 
@@ -401,9 +430,15 @@ for root,dir,files in os.walk("/home/pramod/sem6/mlt/project/snapshot/"):
         #     ax1 = plt.subplot(number_of_subplots,1,v)
             # showfig(orig_rects[i], plt.get_cmap('gray'))
             
-            cv2.imwrite('svmtrain/'+str(image_path).strip('.jpg')+'_'+str(i)+'.jpg',orig_rects[i])
-
-
+            cv2.imwrite('testin/'+str(count)+'.jpg',orig_rects[i])
+            count+=1
+        
+        for i in range(0,len(final_images)):
+        #     ax1 = plt.subplot(number_of_subplots,1,v)
+            # showfig(orig_rects[i], plt.get_cmap('gray'))
+            
+            cv2.imwrite('testout/'+str(count)+'.jpg',orig_rects[i])
+            count+=1
         # In[198]:
 
         # for ima in orig_rects:
